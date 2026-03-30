@@ -1,0 +1,71 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Диаграмма контейнеров «Александрит» с логированием
+
+Person(customer, "Customer", "Покупает украшения")
+Person(operator, "Operator", "Работает с заказами")
+Person(seller, "Seller", "Работает в CRM")
+Person(api_user, "API user", "Внешний пользователь API")
+
+System_Boundary(jewelry_system, "Jewelry Store System") {
+    Container(internet_shop, "Internet Shop", "Vue, TypeScript, Threejs", "Создание заказов, 3D-редактор")
+    Container(shop_api, "Shop API", "SpringBoot", "Обработка заказов, загрузка 3D-файлов")
+    Container(shop_db, "Shop DB", "PostgreSQL", "Данные заказов и клиентов")
+    
+    Container(crm, "CRM", "Vue, Typescript", "Работа с клиентами")
+    Container(crm_api, "CRM API", "SpringBoot", "API для CRM")
+    
+    Container(mes_api, "MES API", "C#", "Расчёт стоимости, назначение операторов")
+    Container(mes, "MES", "React, typescript", "Интерфейс для операторов")
+    Container(mes_db, "MES db", "PostgreSQL", "Данные производства")
+    
+    Container(mq, "Messages Queue", "RabbitMQ", "Обмен сообщениями между системами")
+    Container(s3, "3d files storage", "S3-based storage", "Хранение 3D-файлов")
+}
+
+Container(log_collector, "Log Collector", "Filebeat/Fluentd", "Сбор логов", $tags="logging")
+Container(log_storage, "Log Storage", "OpenSearch", "Хранение и анализ логов", $tags="logging")
+Container(log_dashboard, "Log Dashboard", "OpenSearch Dashboards", "Визуализация логов", $tags="logging")
+
+Rel(customer, internet_shop, "Создаёт заказы")
+Rel(internet_shop, shop_api, "API вызовы")
+Rel(shop_api, shop_db, "Чтение/запись")
+Rel(shop_api, s3, "Загрузка файлов")
+Rel(shop_api, mq, "Отправка сообщений")
+
+Rel(seller, crm, "Работа с клиентами")
+Rel(crm, crm_api, "API вызовы")
+Rel(crm_api, crm_db, "Чтение/запись")
+Rel(crm_api, mq, "Отправка/получение сообщений")
+
+Rel(operator, mes, "Работа с заказами")
+Rel(mes, mes_api, "API вызовы")
+Rel(mes_api, mes_db, "Чтение/запись")
+Rel(mes_api, mq, "Отправка/получение сообщений")
+Rel(mes_api, s3, "Доступ к файлам")
+
+Rel(api_user, mes_api, "Внешние API вызовы")
+
+Rel(shop_api, log_collector, "Отправляет логи", $tags="logging")
+Rel(crm_api, log_collector, "Отправляет логи", $tags="logging")
+Rel(mes_api, log_collector, "Отправляет логи", $tags="logging")
+Rel(mq, log_collector, "Отправляет логи", $tags="logging")
+Rel(shop_db, log_collector, "Отправляет логи", $tags="logging")
+Rel(mes_db, log_collector, "Отправляет логи", $tags="logging")
+
+Rel(log_collector, log_storage, "Агрегация логов", $tags="logging")
+Rel(log_storage, log_dashboard, "Визуализация", $tags="logging")
+
+UpdateElementStyle(log_collector, $fontColor="#ffffff", $bgColor="#FF6B6B", $borderColor="#FF6B6B")
+UpdateElementStyle(log_storage, $fontColor="#ffffff", $bgColor="#FF6B6B", $borderColor="#FF6B6B")
+UpdateElementStyle(log_dashboard, $fontColor="#ffffff", $bgColor="#FF6B6B", $borderColor="#FF6B6B")
+
+UpdateRelStyle(shop_api, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+UpdateRelStyle(crm_api, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+UpdateRelStyle(mes_api, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+UpdateRelStyle(mq, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+UpdateRelStyle(shop_db, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+UpdateRelStyle(mes_db, log_collector, $textColor="#FF6B6B", $lineColor="#FF6B6B")
+
+@enduml
