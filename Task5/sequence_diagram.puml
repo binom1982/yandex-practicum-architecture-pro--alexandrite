@@ -1,0 +1,39 @@
+@startuml
+title Чтение и изменение заказов с кешированием
+
+actor Оператор as Operator
+participant "MES Frontend\n(React/TypeScript)" as MESFront
+participant "MES API\n(C#)" as MESAPI
+participant "Cache\n(Redis)" as Cache
+participant "MES DB\n(PostgreSQL)" as MESDB
+
+==Чтение списка заказов с кешированием==
+Operator -> MESFront: Запрос списка заказов
+MESFront -> MESAPI: GET /orders
+MESAPI -> Cache++: Проверка кеша (Get orders_list)
+
+alt Кеш существует и актуален
+    Cache --> MESAPI--: Возврат данных из кеша
+    MESAPI --> MESFront: Данные заказов
+    MESFront --> Operator: Отображение списка
+else Кеш отсутствует или устарел
+    Cache --> MESAPI: Cache Miss
+    MESAPI -> MESDB++: SELECT orders
+    MESDB --> MESAPI--: Данные из БД
+    MESAPI -> Cache++: Запись в кеш (Set orders_list)
+    Cache --> MESAPI--: Подтверждение записи
+    MESAPI --> MESFront: Данные заказов
+    MESFront --> Operator: Отображение списка
+end
+|||
+==Изменение статуса заказа с инвалидацией кеша==
+Operator -> MESFront: Изменение статуса заказа
+MESFront -> MESAPI: PUT /orders/{id}/status
+MESAPI -> MESDB++: UPDATE order status
+MESDB --> MESAPI--: Подтверждение записи
+MESAPI -> Cache++: Инвалидация кеша (Delete orders_list)
+Cache --> MESAPI--: Подтверждение инвалидации
+MESAPI --> MESFront: Подтверждение изменения
+MESFront --> Operator: Обновление интерфейса
+
+@enduml
